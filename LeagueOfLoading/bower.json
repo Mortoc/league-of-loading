@@ -1,0 +1,22 @@
+{
+  "name": "leagueOfLoading",
+  "version": "0.0.1",
+  "main": "index.html",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ],
+  "dependencies": {
+    "jquery": "~2.0",
+    "underscore": "~1.5",
+    "angular": "~1.4",
+    "angular-ui-router": "*",
+    "angular-animate": "~1.4",
+    "angular-resource": "~1.4",
+    "angular-cookies": "~1.4",
+    "angular-mocks": "~1.4",
+    "angular-ui-utils": "~0.1",
+    "moment": "*"
+  }
+}
