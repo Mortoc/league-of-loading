@@ -1,11 +1,38 @@
 
 var Summoners = new Mongo.Collection("summoners");
-var API_KEY = "d5a72743-9f89-4fd4-94d6-88cc37498658";
+var CurrentGames = new Mongo.Collection("currentGames");
 
 if (Meteor.isClient) {
 
+  var isCheckingCurrentGame = false;
   function checkCurrentGame() {
-    Meteor.call("riotCurrentGame", name, function(error, results){
+    if( isCheckingCurrentGame ) {
+      return;
+    }
+
+    $('.not-in-game-text').hide();
+    $('.checking-game-indicator').fadeIn();
+
+    var localSummoner = Session.get('localSummoner');
+    if( !localSummoner ) {
+      throw {
+        exception: "InvalidOperation",
+        message: "localSummoner isn't in this Session, cannot check current game"
+      };
+    }
+
+    isCheckingCurrentGame = true;
+    Meteor.call("riotCurrentGame", localSummoner.riotData.id, function(error, response){
+      isCheckingCurrentGame = false;
+
+      if( error ) {
+        alert(error);
+      } else if( response ) {
+        Session.set('currentGame', response);
+      } else {
+        $('.not-in-game-text').fadeIn();
+        $('.checking-game-indicator').hide();
+      }
     });
   }
 
@@ -32,7 +59,6 @@ if (Meteor.isClient) {
         } else {
           localStorage.setItem("localSummoner", JSON.stringify(results));
           Session.set('localSummoner', results);
-
           checkCurrentGame();
         }
       }
@@ -40,11 +66,14 @@ if (Meteor.isClient) {
   }
 
   Meteor.startup(function(){
+    $('.parallax').parallax();
+    $('.checking-game-indicator').hide();
     var localSummoner = localStorage.getItem("localSummoner");
     if( !localSummoner ) {
       openSummonerNameDialog();
     } else {
       Session.set('localSummoner', JSON.parse(localSummoner));
+      checkCurrentGame();
     }
   });
 
@@ -70,6 +99,9 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isServer){
+  // Needs to be changed to an env variable
+  var API_KEY = "d5a72743-9f89-4fd4-94d6-88cc37498658";
+
   Meteor.methods({
     riotSummonerByName: function(name) {
       var REFRESH_SUMMONER_TIME = moment() - moment(12, "hours");
@@ -105,8 +137,38 @@ if (Meteor.isServer){
         }
       }
     },
-    riotCurrentGame: function(platformId, summonerId) {
+    riotCurrentGame: function(summonerId) {
+      var REFRESH_GAME_TIME = moment() - moment(10, "minutes");
 
+      var currentGame = CurrentGames.findOne({
+        summonerId: summonerId
+      });
+
+      if( currentGame && moment(currentGame.refreshedAt).isAfter(REFRESH_GAME_TIME) ){
+        return currentGame;
+      } else {
+        try{
+          var response = HTTP.get("https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/NA1/" + summonerId, {
+            params: {
+              api_key: API_KEY
+            }
+          });
+
+          var payload = EJSON.parse(response.content);
+          var now = new Date();
+          currentGame = {
+            summonerId: summonerId,
+            createdAt: now,
+            refreshedAt: now,
+            riotData: payload
+          };
+
+          CurrentGames.insert(currentGame);
+          return currentGame;
+        } catch(e) {
+          return null;
+        }
+      }
     }
   });
 }
