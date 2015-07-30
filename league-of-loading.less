@@ -1,8 +1,8 @@
 @import url(http://fonts.googleapis.com/css?family=Oswald);
 
-html, body {
-	width: 100%;
-	height: 100%;
+body {
+  min-height: ~"calc(100vh - 100px)";
+	width: 100vw;
 	color: #212121;
 
   background-image: url("img/background.jpg");
@@ -11,18 +11,123 @@ html, body {
 
 .card-title {
 	font-family: 'Oswald', sans-serif;
-
 }
 
-.app-title {
-	display: block;
-	font-family: 'Oswald', sans-serif;
-	width: 100%;
-	color: white;
-	margin-top: 30px;
-	text-align: center;
-	text-transform: uppercase;
-	letter-spacing: 4px;
-	font-size: 28px;
-	text-shadow: 0 0 15px rgba(0, 0, 0, 1);
+@topBarHeight: 32px;
+.top-bar-spacer {
+	height: @topBarHeight + 8px;
+}
+
+.top-bar {
+	position: fixed;
+	z-index: 1000;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: @topBarHeight;
+
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+
+	.app-title {
+		display: block;
+		font-family: 'Oswald', sans-serif;
+		width: 100%;
+		color: white;
+		text-align: left;
+		text-transform: uppercase;
+		letter-spacing: 2px;
+		font-size: 16px;
+		margin-left: 5px;
+	}
+
+	a {
+		white-space: nowrap;
+		margin-right: 15px;
+		text-align: right;
+		text-transform: uppercase;
+		font-size: 12px;
+		line-height: 12px;
+	}
+}
+
+.app-footer {
+	position: fixed;
+	bottom: 16px;
+	left: 32px;
+	right: 32px;
+	height: 60px;
+
+	display: flex;
+	align-items: center;
+	padding: 20px;
+	a {
+		line-height: 20px;
+		font-size: 14px;
+		text-transform: uppercase;
+		color: #ffab40;
+		transition: color .3s ease;
+		&:hover {
+			color: lighten(#ffab40, 10%);
+		}
+	}
+}
+
+.participant-listing {
+	position: relative;
+
+	.team(@color) {
+		position: absolute;
+
+		width: 8px;
+		left: 0;
+		top: 0;
+		bottom: 0;
+
+		background-color: @color;
+	}
+
+	.blue-team {
+		.team(lighten(blue, 15%));
+	}
+
+	.purple-team {
+		.team(purple);
+	}
+
+	.summoner-icon {
+		margin-top: 6px;
+		height: 32px;
+		width: auto;
+	}
+
+	.summoner-name {
+		position: relative;
+		top: -10px;
+		left: 5px;
+	}
+
+	.league-title {
+		position: absolute;
+		right: 40px;
+		text-align: right;
+		text-transform: capitalize;
+	}
+
+	.league-icon {
+		position: absolute;
+		right: 3px;
+		margin-top: 5px;
+		height: 32px;
+		width: auto;
+	}
+
+	.collapsible-body {
+		background-color: white;
+
+		.collection {
+			margin: 0 10px 8px 16px;
+		}
+	}
 }

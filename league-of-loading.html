@@ -16,26 +16,41 @@
       </div>
     </div>
 
-    <div class="row">
-      <span class="app-title">League of Load Screens</span>
-    </div>
+
+     <div class="top-bar grey darken-3 z-depth-4 white-text">
+       <h5 class="app-title">League of Load Screens</h5>
+       <a class="change-summoner orange-text lighten-1" href="#">
+          {{#if summoner}}
+            {{summoner.riotData.name}}
+          {{else}}
+            Choose Summoner
+          {{/if}}
+       </a>
+     </div>
+     <div class="top-bar-spacer"></div>
+
 
     <div class="current-game row">
+
       {{#if currentGame}}
 
-         <ul class="collapsible popout" data-collapsible="accordion">
-            <li>
-              <div class="collapsible-header"><i class="material-icons">filter_drama</i>First</div>
-              <div class="collapsible-body"><p>Lorem ipsum dolor sit amet.</p></div>
-            </li>
-         </ul>
+        <ul class="collapsible popout z-depth-4">
+        {{#each currentGame.players}}
+          {{>participant}}
+        {{/each}}
+        </ul>
 
-       {{else}}
+     {{else}}
 
        <div class="col s12 m6 offset-m3">
          <div class="card grey darken-3 z-depth-4">
            <div class="card-content white-text">
+              {{#if summoner}}
               <span class="card-title">{{ summoner.riotData.name }}</span>
+              {{else}}
+              <span class="card-title">Enter a summoner name</span>
+              {{/if}}
+
               <p class="not-in-game-text">Not currently in a game</p>
 
               <div class="checking-game-indicator progress">
@@ -48,9 +63,6 @@
               <a class="refresh-current-game" href="#">
                 Refresh
               </a>
-              <a class="change-summoner" href="#">
-                Change Summoner
-              </a>
             </div>
           </div>
         </div>
@@ -60,3 +72,42 @@
 
   </div>
 </body>
+
+<template name="participant">
+  <li class="participant-listing">
+    <div class={{team}}></div>
+
+    <div class="collapsible-header">
+      <img
+        class="summoner-icon"
+        src={{championInfo.image.full}} />
+      <span class="summoner-name">
+        {{summonerName}}
+      </span>
+
+      <span class="league-title text-lighten-1">
+        {{soloQueueLeague.displayText}}
+      </span>
+      <img
+        class="league-icon"
+        src={{soloQueueLeague.iconUrl}} />
+    </div>
+    <div class="collapsible-body">
+      {{#if isAlly}}
+        <p>Tips for playing as {{ championInfo.name }}</p>
+        <ul class='collection'>
+          {{#each championInfo.allytips}}
+          <li class="collection-item">{{this}}</li>
+          {{/each}}
+        </ul>
+      {{else}}
+      <p>Tips for playing against {{ championInfo.name }}</p>
+        <ul class='collection'>
+          {{#each championInfo.enemytips}}
+          <li class="collection-item">{{this}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+  </li>
+</template>
