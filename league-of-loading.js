@@ -3,6 +3,7 @@ var Summoners = new Mongo.Collection("summoners");
 var CurrentGames = new Mongo.Collection("currentGames");
 
 if (Meteor.isClient) {
+  var LOL_VERSION = null;
 
   function updateCurrentGame(currentGame) {
     Session.set('currentGame', currentGame);
@@ -30,7 +31,7 @@ if (Meteor.isClient) {
         if( err ) {
           console.error(err);
         } else {
-          champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/champion/" + champResponse.image.full;
+          champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/" + LOL_VERSION + "/img/champion/" + champResponse.image.full;
           console.log(champResponse);
           participant.championInfo = champResponse;
           participant.isAlly = participant.teamId == localSummonerTeamId;
@@ -113,39 +114,7 @@ if (Meteor.isClient) {
     setupSummonerInfo(response, currentGame);
   }
 
-  var isCheckingCurrentGame = false;
-  function checkCurrentGame() {
-    if( isCheckingCurrentGame ) {
-      return;
-    }
-
-    $('.not-in-game-text').hide();
-    $('.checking-game-indicator').fadeIn();
-
-    var localSummoner = Session.get('localSummoner');
-    if( !localSummoner ) {
-      throw {
-        exception: "InvalidOperation",
-        message: "localSummoner isn't in this Session, cannot check current game"
-      };
-    }
-
-    isCheckingCurrentGame = true;
-    Meteor.call("riotCurrentGame", localSummoner.riotData.id, function(error, response){
-      isCheckingCurrentGame = false;
-
-      if( error ) {
-        console.error(error);
-      } else if( response ) {
-        processGameResponse(response);
-      } else {
-        $('.not-in-game-text').fadeIn();
-        $('.checking-game-indicator').hide();
-      }
-    });
-  }
-
-  function openSummonerNameDialog() {
+  function resetApp() {
     $('.summoner-name').val("");
     $('.not-in-game-text').hide();
     localStorage.removeItem("localSummoner");
@@ -153,6 +122,45 @@ if (Meteor.isClient) {
     Session.set('currentGame', null);
     $('.enter-summoner-name-modal').openModal();
     $('.summoner-name').focus();
+  }
+
+
+  var isCheckingCurrentGame = false;
+  function checkCurrentGame() {
+    try{
+
+      if( isCheckingCurrentGame ) {
+        return;
+      }
+
+      $('.not-in-game-text').hide();
+      $('.checking-game-indicator').fadeIn();
+
+      var localSummoner = Session.get('localSummoner');
+      if( !localSummoner ) {
+        throw {
+          exception: "InvalidOperation",
+          message: "localSummoner isn't in this Session, cannot check current game"
+        };
+      }
+
+      isCheckingCurrentGame = true;
+      Meteor.call("riotCurrentGame", localSummoner.riotData.id, function(error, response){
+        isCheckingCurrentGame = false;
+
+        if( error ) {
+          console.error(error);
+        } else if( response ) {
+          processGameResponse(response);
+        } else {
+          $('.not-in-game-text').fadeIn();
+          $('.checking-game-indicator').hide();
+        }
+      });
+    } catch(e) {
+      console.error(e);
+      resetApp();
+    }
   }
 
   function setSummonerName() {
@@ -166,7 +174,7 @@ if (Meteor.isClient) {
       } else {
         if( !results ) {
           alert("Summoner name not found");
-          openSummonerNameDialog();
+          resetApp();
         } else {
           console.log(results);
           localStorage.setItem("localSummoner", JSON.stringify(results));
@@ -182,11 +190,18 @@ if (Meteor.isClient) {
     $('.checking-game-indicator').hide();
     var localSummoner = localStorage.getItem("localSummoner");
     if( !localSummoner ) {
-      openSummonerNameDialog();
+      resetApp();
     } else {
       Session.set('localSummoner', JSON.parse(localSummoner));
       checkCurrentGame();
     }
+    Meteor.call("riotCurrentVersion", function(err, version){
+      if( err ) {
+        console.error(err);
+      } else {
+        LOL_VERSION = version;
+      }
+    });
   });
 
   Template.body.helpers({
@@ -209,7 +224,7 @@ if (Meteor.isClient) {
     },
     'click .load-summoner': setSummonerName,
     'click .refresh-current-game': _.throttle(checkCurrentGame, 2500),
-    'click .change-summoner': openSummonerNameDialog,
+    'click .change-summoner': resetApp,
   });
 }
 
@@ -218,15 +233,23 @@ if (Meteor.isServer){
   var API_KEY = "d5a72743-9f89-4fd4-94d6-88cc37498658";
 
   Meteor.methods({
+    riotCurrentVersion: function() {
+      var response = HTTP.get("https://global.api.pvp.net/api/lol/static-data/na/v1.2/versions", {
+        params: {
+          api_key: API_KEY
+        }
+      });
+      return _.first(EJSON.parse(response.content));
+    },
     riotSummonerByName: function(name) {
       var REFRESH_SUMMONER_TIME = moment() - moment(12, "hours");
-      name = name.toLowerCase().replace(" ", "");
+      name = name.toLowerCase().replace(/\s/g, '');
 
       var summoner = Summoners.findOne({
         name: name
       });
 
-      if( false && summoner && moment(summoner.refreshedAt).isBefore(REFRESH_SUMMONER_TIME) ){
+      if( summoner && moment(summoner.refreshedAt).isBefore(REFRESH_SUMMONER_TIME) ){
         console.log("riotSummonerByName: Avoiding RiotAPI call, using cached data");
         return summoner;
       } else {
@@ -259,13 +282,12 @@ if (Meteor.isServer){
     //https://na.api.pvp.net/api/lol/na/v2.5/league/by-summoner/22224/entry?api_key=d5a72743-9f89-4fd4-94d6-88cc37498658
     riotLeagueBySummonerEntry: function(summonerIds) {
       var apiUrl = "https://na.api.pvp.net/api/lol/na/v2.5/league/by-summoner/" + summonerIds.join(',') + "/entry";
-      console.log(apiUrl);
       var response = HTTP.get(apiUrl, {
         params: {
           api_key: API_KEY
         }
       });
-      console.log(response);
+
       return EJSON.parse(response.content);
     },
 
