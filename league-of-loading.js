@@ -13,6 +13,23 @@ if (Meteor.isClient) {
     });
   }
 
+  function ritoPlsStripBuggedEndTagsFromArray(array) {
+    return _.map(array, function(str){
+      if(!_.isString(str)) {
+        throw {
+          exception: "InvalidOperation",
+          message: "all the elements of the array should be strings"
+        };
+      }
+
+      if( str.endsWith("</li>") ) {
+        console.log(str);
+        return str.substring(0, str.length - "</li>".length);
+      }
+      return str;
+    })
+  }
+
   function setupChampInfo(response, currentGame) {
     var team1Id = null;
     var localSummonerTeamId = null;
@@ -34,6 +51,11 @@ if (Meteor.isClient) {
         } else {
           champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/" + LATEST_LOL_VERSION + "/img/champion/" + champResponse.image.full;
           participant.championInfo = champResponse;
+
+          // some of ritos data is coming back with a random html tag at the end of the string
+          participant.championInfo.allytips = ritoPlsStripBuggedEndTagsFromArray(participant.championInfo.allytips);
+          participant.championInfo.enemytips = ritoPlsStripBuggedEndTagsFromArray(participant.championInfo.enemytips);
+
           participant.isAlly = participant.teamId == localSummonerTeamId;
           if( participant.teamId === team1Id ) {
             participant.team = "blue-team";
