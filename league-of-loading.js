@@ -1,9 +1,10 @@
 
 var Summoners = new Mongo.Collection("summoners");
 var CurrentGames = new Mongo.Collection("currentGames");
+var LEAD_BOLT_API_KEY = "Oo36kxpKGQoqYLqmv4o7pOu7RwWkGo5n";
 
 if (Meteor.isClient) {
-  var LOL_VERSION = null;
+  var LATEST_LOL_VERSION = null;
 
   function updateCurrentGame(currentGame) {
     Session.set('currentGame', currentGame);
@@ -31,8 +32,7 @@ if (Meteor.isClient) {
         if( err ) {
           console.error(err);
         } else {
-          champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/" + LOL_VERSION + "/img/champion/" + champResponse.image.full;
-          console.log(champResponse);
+          champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/" + LATEST_LOL_VERSION + "/img/champion/" + champResponse.image.full;
           participant.championInfo = champResponse;
           participant.isAlly = participant.teamId == localSummonerTeamId;
           if( participant.teamId === team1Id ) {
@@ -176,30 +176,41 @@ if (Meteor.isClient) {
           alert("Summoner name not found");
           resetApp();
         } else {
-          console.log(results);
-          localStorage.setItem("localSummoner", JSON.stringify(results));
-          Session.set('localSummoner', results);
+          setLocalSummoner(results);
           checkCurrentGame();
         }
       }
     });
   }
 
+  function setLocalSummoner(localSummoner) {
+    localStorage.setItem("localSummoner", JSON.stringify(localSummoner));
+    Session.set('localSummoner', localSummoner);
+    ga("set", "&uid", localSummoner.name);
+  }
+
+  function setupAds() {
+    // AppTracker.startSession(LEAD_BOLT_API_KEY);
+    // AppTracker.loadModuleToCache("inapp");
+    // AppTracker.loadModule("inapp");
+  }
+
   Meteor.startup(function(){
+    setupAds();
     $(".button-collapse").sideNav();
     $('.checking-game-indicator').hide();
     var localSummoner = localStorage.getItem("localSummoner");
     if( !localSummoner ) {
       resetApp();
     } else {
-      Session.set('localSummoner', JSON.parse(localSummoner));
+      setLocalSummoner(JSON.parse(localSummoner));
       checkCurrentGame();
     }
     Meteor.call("riotCurrentVersion", function(err, version){
       if( err ) {
         console.error(err);
       } else {
-        LOL_VERSION = version;
+        LATEST_LOL_VERSION = version;
       }
     });
   });
@@ -230,13 +241,13 @@ if (Meteor.isClient) {
 
 if (Meteor.isServer){
   // Needs to be changed to an env variable
-  var API_KEY = "d5a72743-9f89-4fd4-94d6-88cc37498658";
+  var RIOT_API_KEY = "d5a72743-9f89-4fd4-94d6-88cc37498658";
 
   Meteor.methods({
     riotCurrentVersion: function() {
       var response = HTTP.get("https://global.api.pvp.net/api/lol/static-data/na/v1.2/versions", {
         params: {
-          api_key: API_KEY
+          api_key: RIOT_API_KEY
         }
       });
       return _.first(EJSON.parse(response.content));
@@ -257,7 +268,7 @@ if (Meteor.isServer){
           console.log("riotSummonerByName: Hitting RiotAPI");
           var response = HTTP.get("https://na.api.pvp.net/api/lol/na/v1.4/summoner/by-name/" + name, {
             params: {
-              api_key: API_KEY
+              api_key: RIOT_API_KEY
             }
           });
 
@@ -284,7 +295,7 @@ if (Meteor.isServer){
       var apiUrl = "https://na.api.pvp.net/api/lol/na/v2.5/league/by-summoner/" + summonerIds.join(',') + "/entry";
       var response = HTTP.get(apiUrl, {
         params: {
-          api_key: API_KEY
+          api_key: RIOT_API_KEY
         }
       });
 
@@ -306,7 +317,7 @@ if (Meteor.isServer){
           console.log("riotCurrentGame: Hitting RiotAPI");
           var response = HTTP.get("https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/NA1/" + summonerId, {
             params: {
-              api_key: API_KEY
+              api_key: RIOT_API_KEY
             }
           });
 
@@ -322,16 +333,17 @@ if (Meteor.isServer){
           CurrentGames.insert(currentGame);
           return currentGame;
         } catch(e) {
-          console.error(e);
+          // No Current Game
           return null;
         }
       }
     },
 
     riotStaticDataChampion: function(championId) {
+      this.unblock();
       return EJSON.parse(HTTP.get("https://global.api.pvp.net/api/lol/static-data/na/v1.2/champion/" + championId, {
         params: {
-          api_key: API_KEY,
+          api_key: RIOT_API_KEY,
           locale: "en_US",
           champData: "allytips,altimages,enemytips,image,info"
         }

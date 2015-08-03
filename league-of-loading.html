@@ -17,7 +17,7 @@
     </div>
 
 
-     <div class="top-bar grey darken-3 z-depth-4 white-text">
+     <div class="top-bar grey darken-3 z-depth-2 white-text">
        <h5 class="app-title">League of Load Screens</h5>
        <a class="change-summoner orange-text lighten-1" href="#">
           {{#if summoner}}
@@ -63,14 +63,26 @@
               <a class="refresh-current-game" href="#">
                 Refresh
               </a>
+              <a class="change-summoner orange-text lighten-1" href="#">
+                Different Summoner
+              </a>
             </div>
           </div>
         </div>
 
        {{/if}}
     </div>
-
   </div>
+
+  <script type="text/javascript" src="http://ad.leadboltmobile.net/show_app_ad.js?section_id=762958582"></script>
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    ga('create', 'UA-65854146-1', 'auto');
+    ga('send', 'pageview');
+  </script>
 </body>
 
 <template name="participant">
@@ -97,14 +109,14 @@
         <p>Tips for playing as {{ championInfo.name }}</p>
         <ul class='collection'>
           {{#each championInfo.allytips}}
-          <li class="collection-item">{{this}}</li>
+          <li class="collection-item"> {{this}} </li>
           {{/each}}
         </ul>
       {{else}}
       <p>Tips for playing against {{ championInfo.name }}</p>
         <ul class='collection'>
           {{#each championInfo.enemytips}}
-          <li class="collection-item">{{this}}</li>
+          <li class="collection-item"> {{this}} </li>
           {{/each}}
         </ul>
       {{/if}}
