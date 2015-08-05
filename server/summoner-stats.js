@@ -5,61 +5,63 @@ var SummonerStats = new Mongo.Collection("summonerStats");
 // Averages across all summoners
 var AggregateSummonerStats = new Mongo.Collection("aggregateSummonerStats");
 
+var STATS_URL = "https://na.api.pvp.net/api/lol/na/v2.2/matchhistory/{0}";
 var STATS_CACHE_TIMEOUT = moment() - moment(7, "days");
 
-if (Meteor.isServer){
-  var Future = Npm.require("fibers/future");
+var Future = Npm.require("fibers/future");
 
-  function addMatchToAggregateStats(matchData) {
-    var participant = _.first(matchData.participants);
+function addMatchToAggregateStats(matchData) {
+  var participant = _.first(matchData.participants);
 
-    // store stats by queue, league, role, lane
-    var hash = [
-      matchData.queueType, // RANKED_SOLO_5x5
-      participant.highestAchievedSeasonTier, // MASTER
-      matchData.timeline.role, // SOLO
-      matchData.timeline.lane // MIDDLE
-    ].join("|");
+  // store stats by queue, league, role, lane
+  var hash = [
+    matchData.queueType, // RANKED_SOLO_5x5
+    participant.highestAchievedSeasonTier, // MASTER
+    matchData.timeline.role, // SOLO
+    matchData.timeline.lane // MIDDLE
+  ].join("|");
 
-    console.log(hash);
-  }
+  console.log(hash);
+}
 
-  var calculateSummonerStats = Meteor.wrapAsync(function(summonerId, onComplete) {
-    Meteor.http.get("https://na.api.pvp.net/api/lol/na/v2.2/matchhistory/" + summonerId, {
-      params: {
-        api_key: RIOT_API_KEY
-      }
-    }, function(error, result) {
-      console.log(result);
-      onComplete(error, result);
+var calculateSummonerStats = Meteor.wrapAsync(function(summonerId, onComplete) {
+  Meteor.http.get(STATS_URL.format(summonerId), {
+    params: {
+      api_key: RIOT.API_KEY
+    }
+  }, function(error, result) {
+    console.log(result);
+    onComplete(error, result);
+  });
+});
+
+summonerRecentStats = function(summonerIds) {
+  console.log(summonerIds);
+  var statQueryFutures = _.map(summonerIds, function(summonerId) {
+    var future = new Future();
+
+    var summonerStats = SummonerStats.findOne({
+      summonerId: summonerId
     });
+
+    if( summonerStats && moment(summonerStats.refreshedAt).isBefore(REFRESH_STATS_TIME) ){
+      future.return(summonerStats);
+    } else {
+      calculateSummonerStats(summonerId, function(err, result){
+        SummonerStats.insert(result);
+        future.return(result);
+      });
+    }
+    return future;
   });
 
-  function summonerRecentStats(summonerIds) {
-    var statQueryFutures = _.map(summonerIds, function(summonerId) {
-      var future = new Future();
+  var result = _.map(statQueryFutures, function(future, i){
+    return future.wait();
+  });
 
-      var summonerStats = SummonerStats.findOne({
-        summonerId: summonerId
-      });
+  return result;
+};
 
-      if( summonerStats && moment(summonerStats.refreshedAt).isBefore(REFRESH_STATS_TIME) ){
-        future.return(summonerStats);
-      } else {
-        calculateSummonerStats(summonerId, function(err, result){
-          SummonerStats.insert(result);
-          future.return(result);
-        });
-      }
-      return future;
-    });
-
-    var result = _.map(statQueryFutures, function(future, i){
-      return future.wait();
-    });
-
-    return result;
-  }
     //
     //
     // try {
@@ -87,8 +89,3 @@ if (Meteor.isServer){
     //   console.error(e);
     //   return null;
     // }
-
-  Meteor.methods({
-    summonerRecentStats: summonerRecentStats
-  });
-}

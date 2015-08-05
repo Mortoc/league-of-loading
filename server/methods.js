@@ -1,3 +1,7 @@
+SECOND = 100; // ms
+MINUTE = 60 * SECOND;
+HOUR = 60 * MINUTE;
+DAY = 24 * HOUR;
 
 Meteor.methods({
   riotCurrentVersion: function() {
@@ -19,5 +23,8 @@ Meteor.methods({
   riotLeagueBySummonerEntry: function(summonerIds) {
     if( !_.isArray(summonerIds) ) throw new Meteor.Error(500, "Unexpected Type for argument summonerIds");
     return RiotAPI.leagueBySummoners(summonerIds);
+  },
+  summonerRecentStats: function(summonerIds){
+    return summonerRecentStats(summonerIds);
   }
 });

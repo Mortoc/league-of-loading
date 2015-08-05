@@ -1,6 +1,7 @@
 var Summoners = new Mongo.Collection("summoners");
 var CurrentGames = new Mongo.Collection("currentGames");
 var RiotApiCallRecords = new Mongo.Collection("riotApiCallRecords");
+
 var Future = Npm.require("fibers/future");
 
 RIOT = {
@@ -37,7 +38,7 @@ function hasTimeoutLapsed(refreshTime, cacheTimeout) {
   return refreshTime < cacheExpireTime;
 }
 
-function makeRiotApiCall(url, options) {
+makeRiotApiCall = function(url, options) {
   var _options = _.extend({
     cacheTimeout: null,
     store: null,
@@ -95,9 +96,8 @@ function makeRiotApiCall(url, options) {
       future.return(resultData);
     });
   }
-
   return future.wait();
-}
+};
 
 RiotAPI = {
   currentVersion: null,
