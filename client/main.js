@@ -1,5 +1,14 @@
 var LATEST_LOL_VERSION = null;
 
+function reportError() {
+  console.error(arguments);
+  if( Meteor.isCordova ) {
+    alert(_.map(arguments, function(arg){
+      return JSON.stringify(arg);
+    }).join("\n"));
+  }
+}
+
 function customShowStaggeredList(selector, options) {
   var time = 0;
   var _options = { duration: 800, elementDelay: 120 };
@@ -80,7 +89,7 @@ function ritoPlsStripBuggedEndTagsFromArray(array) {
 function setupSummonerStats(summonerIds) {
   Meteor.call("summonerRecentStats", summonerIds, function(err, statsBySummoner) {
     if( err ) {
-      console.error(err);
+      reportError(err);
     } else {
       var currentGame = Session.get("currentGame");
       _.each(currentGame.players, function(participant){
@@ -141,7 +150,7 @@ function setupChampInfo(response, currentGame) {
 
     Meteor.call("riotStaticDataChampion", participant.championId, function(err, champResponse){
       if( err ) {
-        console.error(err);
+        reportError(err);
       } else {
         champResponse.image.full = "http://ddragon.leagueoflegends.com/cdn/" + LATEST_LOL_VERSION + "/img/champion/" + champResponse.image.full;
         participant.championInfo = champResponse;
@@ -256,7 +265,7 @@ function roleToDisplayName(laneRole) {
 function setupSummonerSpells(participants, currentGame) {
   Meteor.call("riotStaticDataSpells", function(err, response){
     if( err) {
-      console.error(err);
+      reportError(err);
       return;
     }
 
@@ -356,19 +365,20 @@ function checkCurrentGame() {
       isCheckingCurrentGame = false;
 
       if( error ) {
-        console.error(error);
+        reportError(error);
       } else if( response == "NoCurrentGame") {
         $('.not-in-game-text').fadeIn();
         $('.checking-game-indicator').hide();
       } else if( response ) {
         processGameResponse(response);
       } else {
-        console.error(response);
+        reportError(response);
       }
     });
   } catch(e) {
-    console.error(e);
+    reportError(e);
     resetApp();
+    isCheckingCurrentGame = false;
   }
 }
 
@@ -379,7 +389,7 @@ function setSummonerName() {
     $('.enter-summoner-name-modal').closeModal();
 
     if( error ) {
-      console.error(error);
+      reportError(error);
     } else {
       if( !results || results == "NotFound" ) {
         alert("Summoner name not found");
@@ -411,7 +421,7 @@ Meteor.startup(function(){
   }
   Meteor.call("riotCurrentVersion", function(err, version){
     if( err ) {
-      console.error(err);
+      reportError(err);
     } else {
       LATEST_LOL_VERSION = version;
     }
