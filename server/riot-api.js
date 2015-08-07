@@ -1,10 +1,12 @@
+var RiotAPICache = new Mongo.Collection("riotCache");
+
 var Summoners = new Mongo.Collection("summoners");
 var CurrentGames = new Mongo.Collection("currentGames");
 var RiotApiCallRecords = new Mongo.Collection("riotApiCallRecords");
 
 var Future = Npm.require("fibers/future");
 
-RIOT = {
+var RIOT = {
   KEY: "d5a72743-9f89-4fd4-94d6-88cc37498658",
   CALL_LIMITS: [
     { PEROID: 10 * SECOND, LIMIT: 10 },
@@ -30,6 +32,12 @@ RIOT = {
       locale: "en_US",
       champData: "allytips,altimages,enemytips,image,info"
     }
+  },
+  SPELL_DATA: {
+    URL: "https://global.api.pvp.net/api/lol/static-data/na/v1.2/summoner-spell",
+    EXTRA_PARAMS: {
+      spellData: "all"
+    }
   }
 };
 
@@ -41,34 +49,33 @@ function hasTimeoutLapsed(refreshTime, cacheTimeout) {
 makeRiotApiCall = function(url, options) {
   var _options = _.extend({
     cacheTimeout: null,
-    store: null,
-    storeKey: null,
     transformResponse: null,
     errorHandler: function(status){ }
   }, options);
-
-  if( _options.store && (!_options.storeKey || !_options.cacheTimeout)) {
-    console.log(_options);
-    throw new Meteor.Error(500, "When using a cache store, store, storeKey and cacheTimeout are required options");
-  }
 
   var future = new Future();
   var usedCache = false;
 
   // Check if the cached model is sufficient
-  if( _options.store ) {
-    var model = _options.store.findOne({ cacheKey: _options.storeKey });
+  if( _options.cacheTimeout ) {
+    var model = RiotAPICache.findOne({ url: url });
 
-    if( model && !hasTimeoutLapsed(model.refreshedAt, _options.cacheTimeout) ) {
-      future.return(model);
-      usedCache = true;
+    if( model ) {
+      if( hasTimeoutLapsed(model.refreshedAt, _options.cacheTimeout) ) {
+        RiotAPICache.remove(model);
+      } else {
+        future.return(model.data);
+        usedCache = true;
+      }
     }
   }
 
   // If the cached model wasn't used, do the external query and cache the result
   if( !usedCache ) {
+    //console.log("Calling RIOT API", url);
     Meteor.http.get(url, {params: { api_key: RIOT.KEY }}, function(error, result) {
       if(error) {
+        console.log("Handling an error code: ", error.response.statusCode);
         var errorHandleResult = _options.errorHandler(error.response.statusCode);
         if( !_.isUndefined(errorHandleResult) ) {
           future.return(errorHandleResult);
@@ -79,15 +86,11 @@ makeRiotApiCall = function(url, options) {
       }
 
       var resultData = result.data;
-      if( _.isFunction(_options.transformResponse) ) {
-        resultData = _options.transformResponse(resultData);
-      }
 
-      if( _options.store ) {
+      if( _options.cacheTimeout ) {
         var now = new Date().getTime();
-        _options.store.insert({
-          cacheKey: _options.storeKey,
-          createdAt: now,
+        RiotAPICache.insert({
+          url: url,
           refreshedAt: now,
           data: resultData
         });
@@ -96,7 +99,12 @@ makeRiotApiCall = function(url, options) {
       future.return(resultData);
     });
   }
-  return future.wait();
+
+  var result = future.wait();
+  if( _.isFunction(_options.transformResponse) ) {
+    result = _options.transformResponse(result);
+  }
+  return result;
 };
 
 RiotAPI = {
@@ -108,8 +116,6 @@ RiotAPI = {
 
     return makeRiotApiCall( RIOT.SUMMONER_BY_NAME.URL.format(formattedName), {
       cacheTimeout: RIOT.SUMMONER_BY_NAME.CACHE_TIMEOUT,
-      store: Summoners,
-      storeKey: formattedName,
       transformResponse: function(responseContent) {
         var summonerData = responseContent[formattedName];
         summonerData.summonerId = summonerData.id;
@@ -131,8 +137,6 @@ RiotAPI = {
   currentGame: function(summonerId) {
     return makeRiotApiCall(RIOT.CURRENT_GAME.URL.format("NA1", summonerId), {
       cacheTimeout: RIOT.CURRENT_GAME.CACHE_TIMEOUT,
-      store: CurrentGames,
-      storeKey: summonerId,
       errorHandler: function(status){
         if( status == 404 ) {
           return "NoCurrentGame";
@@ -142,11 +146,18 @@ RiotAPI = {
   },
   championStaticData: function(championId) {
     // Static data does not count against the API limits
-    return EJSON.parse(HTTP.get(RIOT.CHAMPION_DATA.URL.format(championId), {
+    return HTTP.get(RIOT.CHAMPION_DATA.URL.format(championId), {
       params: _.extend({
         api_key: RIOT.KEY,
       }, RIOT.CHAMPION_DATA.EXTRA_PARAMS)
-    }).content);
+    }).data;
+  },
+  spellStaticData: function() {
+    return HTTP.get(RIOT.SPELL_DATA.URL, {
+      params: _.extend({
+        api_key: RIOT.KEY
+      }, RIOT.SPELL_DATA.EXTRA_PARAMS)
+    }).data;
   }
 };
 

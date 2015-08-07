@@ -1,4 +1,3 @@
-
 if (!String.prototype.format) {
   String.prototype.format = function() {
     var args = arguments;
@@ -7,5 +6,11 @@ if (!String.prototype.format) {
         ? args[number]
         : match;
     });
+  };
+}
+if (typeof String.prototype.startsWith != 'function') {
+  // see below for better implementation!
+  String.prototype.startsWith = function (str){
+    return this.indexOf(str) === 0;
   };
 }

@@ -1,5 +1,5 @@
 <head>
-  <title>League of Loading</title>
+  <title>League of Load Screens</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
 
@@ -27,7 +27,6 @@
        </a>
      </div>
      <div class="top-bar-spacer"></div>
-
 
     <div class="current-game row">
 
@@ -63,7 +62,7 @@
                 Refresh
               </a>
               <a class="change-summoner orange-text lighten-1" href="#">
-                Different Summoner
+                Change Summoner
               </a>
             </div>
           </div>
@@ -85,9 +84,7 @@
 </body>
 
 <template name="participant">
-  <li class="participant-listing">
-    <div class={{team}}></div>
-
+  <li class="participant-listing {{team}}">
     <div class="collapsible-header">
       <img
         class="summoner-icon"
@@ -95,10 +92,13 @@
       <span class="summoner-name">
         {{summonerName}}
       </span>
+      <img class="spell-icon" src={{spell1Url}} />
+      <img class="spell-icon" src={{spell2Url}} />
 
       <span class="league-title text-lighten-1">
         {{soloQueueLeague.displayText}}
       </span>
+
       <img
         class="league-icon"
         src={{soloQueueLeague.iconUrl}} />
@@ -108,13 +108,46 @@
         <div class="col s12">
           <ul class="tabs">
             <li class="tab col s3">
-              <a class="active" href="#summoner-tips-{{summonerId}}">{{ summonerName }}</a>
+              <a class="active {{teamText}}" href="#summoner-tips-{{summonerId}}">{{ summonerName }}</a>
             </li>
-            <li class="tab col s3"><a href="#champ-tips-{{summonerId}}">{{ championInfo.name }}</a></li>
+            <li class="tab col s3">
+              <a class="{{teamText}}" href="#champ-tips-{{summonerId}}">{{ championInfo.name }}</a>
+            </li>
           </ul>
         </div>
         <div id="summoner-tips-{{summonerId}}" class="col s12">
-          <p>{{ summonerName }}</p>
+
+          <ul class="collection">
+            <li class="collection-item">
+              <span>Likely to Survive</span>
+              <span>{{stats.deaths}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Kills and Assists</span>
+              <span>{{stats.killsAndAssists}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Vision Control</span>
+              <span>{{stats.visionControlRating}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Tower Threat</span>
+              <span>{{stats.towerFocus}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Jungle Invader</span>
+              <span>{{stats.likelyToInvadeJungle}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Farming</span>
+              <span>{{stats.farmRating}}</span>
+            </li>
+            <li class="collection-item">
+              <span>Most common role</span>
+              <span>{{stats.mostCommonRole}}</span>
+            </li>
+          </ul>
+
         </div>
         <div id="champ-tips-{{summonerId}}" class="col s12">
           {{#if isAlly}}

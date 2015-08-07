@@ -1,3 +1,5 @@
+var LATEST_LOL_VERSION = null;
+
 function customShowStaggeredList(selector, options) {
   var time = 0;
   var _options = { duration: 800, elementDelay: 120 };
@@ -98,8 +100,10 @@ function setupChampInfo(response, currentGame) {
         participant.isAlly = participant.teamId == localSummonerTeamId;
         if( participant.teamId === team1Id ) {
           participant.team = "blue-team";
+          participant.teamText = "indigo-text lighten-1";
         } else {
           participant.team = "purple-team";
+          participant.teamText = "purple-text darken-1";
         }
         currentGame.players.push(participant);
         currentGame.players = _.sortBy(currentGame.players, function(p){
@@ -145,16 +149,117 @@ function leagueDisplayText(league){
   return tier;
 }
 
+function average(/* ... */) {
+  return _.reduce(arguments, function(memo, arg){
+    return memo + arg;
+  }, 0) / arguments.length;
+}
+
+function summonerStatRating(percentage) {
+  if( percentage > 1.25 ) {
+    return "God Tier";
+  } else if( percentage > 1.05 ) {
+    return "Above Average";
+  } else if( percentage > 0.95 ) {
+    return "Average";
+  } else if( percentage > 0.75 ) {
+    return "Below Average";
+  } else {
+    return "Garbage";
+  }
+}
+
+function roleToDisplayName(laneRole) {
+  var laneRoleSplit = laneRole.split(" ");
+  var role = laneRoleSplit[0];
+  var lane = laneRoleSplit[1];
+
+  if( role == "DUO_SUPPORT") {
+    return "Support";
+  }
+
+  if( lane == "JUNGLE" ) {
+    return "Jungle";
+  } else if( lane == "MIDDLE" ) {
+    return "Mid Lane";
+  } else if( lane == "BOTTOM" ) {
+    if( role == "DUO") {
+      return "Bot Lane Carry";
+    } else {
+      return "Bot Lane";
+    }
+  } else if( lane == "TOP" ) {
+    return "Top Lane";
+  }
+}
+
+function setupSummonerSpells(participants, currentGame) {
+  Meteor.call("riotStaticDataSpells", function(err, response){
+    if( err) {
+      console.error(err);
+      return;
+    }
+
+    _.each(participants, function(participant) {
+      var spell1 = _.findWhere(response.data, {id: participant.spell1Id});
+      var spell2 = _.findWhere(response.data, {id: participant.spell2Id});
+      
+      participant.spell1Url = "http://ddragon.leagueoflegends.com/cdn/" + LATEST_LOL_VERSION + "/img/spell/" + spell1.image.full;
+      participant.spell2Url = "http://ddragon.leagueoflegends.com/cdn/" + LATEST_LOL_VERSION + "/img/spell/" + spell2.image.full;
+    });
+
+    updateCurrentGame(currentGame);
+  });
+}
+
 function setupSummonerInfo(response, currentGame) {
+  setupSummonerSpells(response.participants, currentGame);
+
   var summonerIds = _.pluck(response.participants, "summonerId");
+  var localSummoner = Session.get("localSummoner");
 
   setTimeout(function(){
-    console.log("making the call");
-    Meteor.call("summonerRecentStats", summonerIds, function(err, resp) {
-      console.log(resp);
-    });
-  }, 10001);
+    Meteor.call("summonerRecentStats", summonerIds, function(err, statsBySummoner) {
+      if( err ) {
+        console.error(err);
+      } else {
+        _.each(response.participants, function(participant){
+          var stats = statsBySummoner[participant.summonerId];
+          participant.stats = {
+            mostCommonRole: roleToDisplayName(stats.mostCommonRole),
+            visionControlRating: summonerStatRating(
+              average(stats.wardsKilled, stats.wardsPlaced)
+            ),
 
+            deaths: summonerStatRating(stats.deaths),
+
+            towerFocus: summonerStatRating(
+              average(
+                Math.max(stats.firstInhibitorAssist, stats.firstInhibitorKill),
+                Math.max(stats.firstTowerAssist, stats.firstTowerKill),
+                stats.towerKills
+              )
+            ),
+
+            killsAndAssists: summonerStatRating(
+              Math.max(stats.kills, stats.assists)
+            ),
+
+            likelyToInvadeJungle: summonerStatRating(
+              stats.neutralMinionsKilledEnemyJungle
+            ),
+
+            farmRating: summonerStatRating(
+              average(stats.minionsKilled, stats.neutralMinionsKilledTeamJungle)
+            )
+          };
+
+        });
+
+        updateCurrentGame(currentGame);
+      }
+    });
+  }, 2500); // delay hack to reduce chances of riot api limiting
 
   Meteor.call("riotLeagueBySummonerEntry", summonerIds, function(err, summonerLeagues){
     _.each(_.keys(summonerLeagues), function(summonerId) {
@@ -162,11 +267,13 @@ function setupSummonerInfo(response, currentGame) {
       var soloQueueLeague = _.findWhere(summonerLeagues[summonerId], {
         queue: "RANKED_SOLO_5x5"
       });
+
       if( !soloQueueLeague ) {
         soloQueueLeague = {
           tier: "PROVISIONAL"
         };
       }
+
       var participant = _.findWhere(response.participants, {
         summonerId: parseInt(summonerId)
       });
@@ -186,8 +293,17 @@ function processGameResponse(response) {
       riotData: response
   };
 
+
+function setupSummonerSpells(participants) {
+  _.each(participants, function(participant) {
+    participant.spell1Url = "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/spell/SummonerFlash.png";
+    participant.spell2Url = "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/spell/SummonerFlash.png";
+  });
+}
   setupChampInfo(response, currentGame);
   setupSummonerInfo(response, currentGame);
+  setupSummonerSpells(response.participants);
+
 }
 
 function resetApp() {

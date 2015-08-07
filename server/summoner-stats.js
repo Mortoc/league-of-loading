@@ -1,91 +1,224 @@
 
 // Stats for an individual summoner
 var SummonerStats = new Mongo.Collection("summonerStats");
-
 // Averages across all summoners
 var AggregateSummonerStats = new Mongo.Collection("aggregateSummonerStats");
+// keep track of which games are in the aggregate stats
+var AggregatedSummonerGames = new Mongo.Collection("aggregatedSummonerGames");
 
 var STATS_URL = "https://na.api.pvp.net/api/lol/na/v2.2/matchhistory/{0}";
-var STATS_CACHE_TIMEOUT = moment() - moment(7, "days");
+var STATS_CACHE_TIMEOUT = 1 * DAY;
 
-var Future = Npm.require("fibers/future");
+var NORMALIZE_STATS_FOR_MATCH_LENGTH = {
+  unrealKills: true,
+  totalDamageTaken: true,
+  pentaKills: true,
+  sightWardsBoughtInGame: true,
+  winner: false,
+  magicDamageDealt: true,
+  wardsKilled: true,
+  largestCriticalStrike: false,
+  trueDamageDealt: true,
+  doubleKills: true,
+  physicalDamageDealt: true,
+  tripleKills: true,
+  deaths: true,
+  firstBloodAssist: false,
+  magicDamageDealtToChampions: true,
+  assists: true,
+  visionWardsBoughtInGame: true,
+  totalTimeCrowdControlDealt: true,
+  champLevel: false,
+  physicalDamageTaken: true,
+  totalDamageDealt: true,
+  largestKillingSpree: false,
+  inhibitorKills: true,
+  minionsKilled: true,
+  towerKills: true,
+  physicalDamageDealtToChampions: true,
+  quadraKills: true,
+  goldSpent: true,
+  totalDamageDealtToChampions: true,
+  goldEarned: true,
+  neutralMinionsKilledTeamJungle: true,
+  firstBloodKill: false,
+  firstTowerKill: false,
+  wardsPlaced: true,
+  trueDamageDealtToChampions: true,
+  killingSprees: true,
+  firstInhibitorKill: false,
+  totalScoreRank: false,
+  totalUnitsHealed: true,
+  kills: true,
+  firstInhibitorAssist: false,
+  totalPlayerScore: false,
+  neutralMinionsKilledEnemyJungle: true,
+  magicDamageTaken: true,
+  largestMultiKill: false,
+  totalHeal: true,
+  objectivePlayerScore: false,
+  firstTowerAssist: false,
+  trueDamageTaken: true,
+  neutralMinionsKilled: true,
+  combatPlayerScore: false
+};
 
-function addMatchToAggregateStats(matchData) {
+function getStatNormalizedValue(participantStats, matchDuration, statName) {
+  // convert match duration to per minute for human-readability
+  matchDuration /= 60;
+
+  var statValue = participantStats[statName]|0;
+
+  if( NORMALIZE_STATS_FOR_MATCH_LENGTH[statName] ) {
+    statValue /= matchDuration;
+  }
+
+  return statValue;
+}
+
+function matchToStatGroup(matchData) {
   var participant = _.first(matchData.participants);
 
   // store stats by queue, league, role, lane
-  var hash = [
+  return [
     matchData.queueType, // RANKED_SOLO_5x5
     participant.highestAchievedSeasonTier, // MASTER
-    matchData.timeline.role, // SOLO
-    matchData.timeline.lane // MIDDLE
+    participant.timeline.role, // SOLO
+    participant.timeline.lane // MIDDLE
   ].join("|");
-
-  console.log(hash);
 }
 
-var calculateSummonerStats = Meteor.wrapAsync(function(summonerId, onComplete) {
-  Meteor.http.get(STATS_URL.format(summonerId), {
-    params: {
-      api_key: RIOT.API_KEY
+function addStats(existingStats, matchDuration, newStats) {
+  _.each(_.keys(newStats), function(statName){
+    // don't track stats on item ids
+    if( !statName.startsWith("item") ) {
+      if( _.isUndefined(existingStats[statName]) ) {
+        existingStats[statName] = 0;
+      }
+
+      existingStats[statName] += getStatNormalizedValue(newStats, matchDuration, statName);
     }
-  }, function(error, result) {
-    console.log(result);
-    onComplete(error, result);
   });
-});
+}
 
-summonerRecentStats = function(summonerIds) {
-  console.log(summonerIds);
-  var statQueryFutures = _.map(summonerIds, function(summonerId) {
-    var future = new Future();
+function aggregateEntryExists(match) {
+  if( match.participantIdentities.length > 1 ) {
+    console.warn("unexpected data, multiple participants returned from Riot");
+  }
 
-    var summonerStats = SummonerStats.findOne({
-      summonerId: summonerId
+  var matchIdentity = {
+    summonerId: _.first(match.participantIdentities).player.summonerId,
+    matchId: match.matchId
+  };
+
+  if( AggregatedSummonerGames.findOne(matchIdentity) ) {
+    return true;
+  } else {
+    AggregatedSummonerGames.insert(matchIdentity);
+    return false;
+  }
+}
+
+function addMatchToAggregateStats(matchData) {
+  if( matchData.participants.length > 1 ) {
+    console.warn("unexpected data, multiple participants returned from Riot");
+  }
+  var participant = _.first(matchData.participants);
+  var group = matchToStatGroup(matchData);
+
+  if( !aggregateEntryExists(matchData) ) {
+    var aggregateStats = AggregateSummonerStats.findOne({
+      grouping: group
     });
 
-    if( summonerStats && moment(summonerStats.refreshedAt).isBefore(REFRESH_STATS_TIME) ){
-      future.return(summonerStats);
+    if( !aggregateStats ) {
+      aggregateStats = {
+        grouping: group,
+        stats: {},
+        denominator: 0
+      };
     } else {
-      calculateSummonerStats(summonerId, function(err, result){
-        SummonerStats.insert(result);
-        future.return(result);
+      AggregateSummonerStats.remove({
+        grouping: group
       });
     }
-    return future;
+
+    addStats(aggregateStats.stats, matchData.matchDuration, participant.stats);
+    aggregateStats.denominator++;
+
+    AggregateSummonerStats.insert(aggregateStats);
+  }
+}
+
+function getSummonerPerformance(matches) {
+  var roleCounts = {};
+  var totalPerformance = _.reduce(matches, function(memo, match){
+    var participant = _.first(match.participants);
+    var laneAndRole = participant.timeline.role + " " + participant.timeline.lane;
+    if( !roleCounts[laneAndRole] ) {
+      roleCounts[laneAndRole] = 1;
+    } else {
+      roleCounts[laneAndRole]++;
+    }
+    var statGroup = matchToStatGroup(match);
+    var aggregateStats = AggregateSummonerStats.findOne({grouping: statGroup});
+
+    if( !aggregateStats ) {
+      throw new Meteor.Error(500, "InternalError: No stat averages found for " + statGroup);
+    }
+
+    _.each(_.keys(participant.stats), function(statName){
+      var summonerStatValue = getStatNormalizedValue(participant.stats, match.matchDuration, statName);
+
+      if( !statName.startsWith("item") ) {
+        var avgStatValue = aggregateStats.stats[statName] / aggregateStats.denominator;
+
+        if( _.isUndefined(memo[statName]) ) {
+          memo[statName] = 0;
+        }
+        
+        if( Math.abs(avgStatValue) < 0.0001 ) {
+          memo[statName] += 1.0;
+        } else {
+          memo[statName] += summonerStatValue / avgStatValue;
+        }
+      }
+    });
+
+    return memo;
+  }, {});
+
+  _.each(_.keys(totalPerformance), function(stat){
+    totalPerformance[stat] /= matches.length;
   });
 
-  var result = _.map(statQueryFutures, function(future, i){
-    return future.wait();
+  var highestRole = null;
+  var highestRoleCount = 0;
+  _.each(_.keys(roleCounts), function(role) {
+    var count = roleCounts[role];
+    if( count > highestRoleCount ) {
+      highestRole = role;
+      highestRoleCount = count;
+    }
   });
 
-  return result;
+  totalPerformance.mostCommonRole = highestRole;
+
+  return totalPerformance;
+}
+
+function calculateSummonerStats(recentMatches) {
+  _.each(recentMatches.matches, addMatchToAggregateStats);
+  return getSummonerPerformance(recentMatches.matches);
+}
+
+summonerRecentStats = function(summonerIds) {
+  return _.reduce(summonerIds, function(memo, summonerId) {
+    var summonerStats = makeRiotApiCall(STATS_URL.format(summonerId), {
+      cacheTimeout: STATS_CACHE_TIMEOUT,
+      transformResponse: calculateSummonerStats
+    });
+    memo[summonerId] = summonerStats;
+    return memo;
+  }, {});
 };
-
-    //
-    //
-    // try {
-    //   var response = HTTP.get("https://na.api.pvp.net/api/lol/na/v2.2/matchhistory/" + summonerId, {
-    //     params: {
-    //       api_key: RIOT_API_KEY
-    //     }
-    //   });
-    //
-    //   var matches = EJSON.parse(response.content);
-    //   var now = new Date();
-    //
-    //   _.each(matches, addMatchToAggregateStats);
-    //
-    //   var summonerStats = {
-    //     summonerId: summonerId,
-    //     createdAt: now,
-    //     refreshedAt: now,
-    //     riotData: matches
-    //   };
-    //
-    //   SummonerStats.insert(summonerStats);
-    //   return summonerStats;
-    // } catch(e) {
-    //   console.error(e);
-    //   return null;
-    // }

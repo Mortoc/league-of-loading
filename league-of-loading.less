@@ -1,4 +1,17 @@
-@import url(http://fonts.googleapis.com/css?family=Oswald);
+@import url(http://fonts.googleapis.com/css?family=Crimson+Text:400,700,600|Roboto:400,100,700,900|Oswald:400,700,300);
+
+
+.oswald {
+  font-family: 'Oswald', sans-serif;
+}
+
+.crimson {
+  font-family: 'Crimson Text', serif;
+}
+
+.roboto {
+  font-family: 'Roboto', sans-serif;
+}
 
 body {
   min-height: ~"calc(100vh - 100px)";
@@ -7,10 +20,11 @@ body {
 
   background-image: url("img/background.jpg");
   background-repeat: repeat;
+  .roboto;
 }
 
 .card-title {
-	font-family: 'Oswald', sans-serif;
+	.oswald;
 }
 
 .not-in-game-text {
@@ -31,9 +45,9 @@ body {
 	height: @topBarHeight;
 
 	.app-title {
+    .oswald;
 		display: inline-block;
     float: left;
-		font-family: 'Oswald', sans-serif;
 		color: white;
 		text-align: left;
 		text-transform: uppercase;
@@ -65,6 +79,7 @@ body {
 	display: flex;
 	align-items: center;
 	padding: 20px;
+
 	a {
 		line-height: 20px;
 		font-size: 14px;
@@ -77,66 +92,102 @@ body {
 	}
 }
 
+.team(@color) {
+	border-left: 5px solid @color;
+
+  .indicator {
+    background-color: lighten(@color, 10%);
+  }
+}
+
+.blue-team {
+	.team(#3d5afe);
+}
+
+.purple-team {
+	.team(#8e24aa);
+}
+
 .participant-listing {
 	position: relative;
   opacity: 0; // gets animated in
+
+  .collapsible-header {
+    position: relative;
+    height: 75px;
+  }
 
   .tab {
     margin-bottom: 30px;
   }
 
-	.team(@color) {
-		position: absolute;
-
-		width: 8px;
-		left: 0;
-		top: 0;
-		bottom: 0;
-
-		background-color: @color;
-    z-index: 2;
-	}
-
-	.blue-team {
-		.team(lighten(blue, 15%));
-	}
-
-	.purple-team {
-		.team(purple);
-	}
+  .icon-centered-title {
+    .crimson;
+    color: rgba(0, 0, 10, .66);
+    text-align: center;
+    text-transform: capitalize;
+    font-size: 10px;
+    line-height: 10px;
+  }
 
 	.summoner-icon {
-		margin-top: 6px;
-		height: 32px;
+		margin-top: 15px;
+		height: 45px;
 		width: auto;
 	}
 
 	.summoner-name {
-		position: relative;
-		top: -10px;
-		left: 5px;
+		position: absolute;
+		top: 5px;
+		left: 67px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(0, 0, 10, .5);
 	}
 
 	.league-title {
 		position: absolute;
-		right: 40px;
-		text-align: right;
-		text-transform: capitalize;
+		right: 0;
+    bottom: 11px;
+    width: 75px;
+    .icon-centered-title;
 	}
 
 	.league-icon {
 		position: absolute;
-		right: 3px;
-		margin-top: 5px;
-		height: 32px;
+		right: 15px;
+		bottom: 21px;
+		height: 45px;
 		width: auto;
 	}
+
+  .spell-icon {
+    height: 22px;
+    border: 1px solid rgba(0, 0, 10, .33);
+    margin-left: 3px;
+
+    &:nth-child(2n) {
+      margin-left: 0;
+    }
+  }
 
 	.collapsible-body {
 		background-color: white;
 
 		.collection {
-			margin: 0 10px 8px 16px;
+			margin: 0 10px 0 10px;
+
+      .collection-item {
+        span {
+          font-weight: normal;
+          color: rgba(0, 0, 10, .66);
+        }
+        span:nth-child(2n) {
+          float: right;
+          font-weight: bold;
+          color: rgba(0, 0, 10, .75);
+        }
+      }
 		}
 	}
 }
