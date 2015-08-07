@@ -178,14 +178,19 @@ body {
 			margin: 0 10px 0 10px;
 
       .collection-item {
-        span {
+        .stat-title {
           font-weight: normal;
           color: rgba(0, 0, 10, .66);
         }
-        span:nth-child(2n) {
+        .stat-value {
           float: right;
           font-weight: bold;
           color: rgba(0, 0, 10, .75);
+
+          &:empty:after {
+            content: "Loading...";
+            color: rgba(0, 0, 10, .25);
+          }
         }
       }
 		}
