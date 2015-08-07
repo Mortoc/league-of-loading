@@ -86,6 +86,37 @@ function ritoPlsStripBuggedEndTagsFromArray(array) {
   })
 }
 
+function calculateStats(rawStats) {
+  return {
+    mostCommonRole: roleToDisplayName(rawStats.mostCommonRole),
+    visionControlRating: summonerStatRating(
+      average(rawStats.wardsKilled, rawStats.wardsPlaced)
+    ),
+
+    deaths: summonerStatRating(rawStats.deaths),
+
+    towerFocus: summonerStatRating(
+      average(
+        Math.max(rawStats.firstInhibitorAssist, rawStats.firstInhibitorKill),
+        Math.max(rawStats.firstTowerAssist, rawStats.firstTowerKill),
+        rawStats.towerKills
+      )
+    ),
+
+    killsAndAssists: summonerStatRating(
+      Math.max(rawStats.kills, rawStats.assists)
+    ),
+
+    likelyToInvadeJungle: summonerStatRating(
+      rawStats.neutralMinionsKilledEnemyJungle
+    ),
+
+    farmRating: summonerStatRating(
+      average(rawStats.minionsKilled, rawStats.neutralMinionsKilledTeamJungle)
+    )
+  };
+}
+
 function setupSummonerStats(summonerIds) {
   Meteor.call("summonerRecentStats", summonerIds, function(err, statsBySummoner) {
     if( err ) {
@@ -95,34 +126,7 @@ function setupSummonerStats(summonerIds) {
       _.each(currentGame.players, function(participant){
         var stats = statsBySummoner[participant.summonerId];
         if( stats ){
-          participant.stats = {
-            mostCommonRole: roleToDisplayName(stats.mostCommonRole),
-            visionControlRating: summonerStatRating(
-              average(stats.wardsKilled, stats.wardsPlaced)
-            ),
-
-            deaths: summonerStatRating(stats.deaths),
-
-            towerFocus: summonerStatRating(
-              average(
-                Math.max(stats.firstInhibitorAssist, stats.firstInhibitorKill),
-                Math.max(stats.firstTowerAssist, stats.firstTowerKill),
-                stats.towerKills
-              )
-            ),
-
-            killsAndAssists: summonerStatRating(
-              Math.max(stats.kills, stats.assists)
-            ),
-
-            likelyToInvadeJungle: summonerStatRating(
-              stats.neutralMinionsKilledEnemyJungle
-            ),
-
-            farmRating: summonerStatRating(
-              average(stats.minionsKilled, stats.neutralMinionsKilledTeamJungle)
-            )
-          };
+          participant.stats = calculateStats(stats);
         }
       });
 
@@ -252,11 +256,7 @@ function roleToDisplayName(laneRole) {
   } else if( lane == "MIDDLE" ) {
     return "Mid Lane";
   } else if( lane == "BOTTOM" ) {
-    if( role == "DUO") {
-      return "Bot Lane Carry";
-    } else {
-      return "Bot Lane";
-    }
+    return "Bot Lane Carry";
   } else if( lane == "TOP" ) {
     return "Top Lane";
   }
@@ -447,6 +447,27 @@ Template.body.events({
     }
   },
   'click .load-summoner': setSummonerName,
-  'click .refresh-game': checkCurrentGame,
+  'click .refresh-game': function(){
+    checkCurrentGame();
+    $(".refresh-game")
+      .velocity({rotateZ: "360deg"}, {duration: 1000})
+      .velocity({rotateZ: 0}, {duration: 0});
+  },
+  'click .view-my-stats': function(){
+    var localSummoner = Session.get("localSummoner");
+
+    Meteor.call("summonerRecentStats", [localSummoner.summonerId], function(err, statsBySummoner) {
+      if( err ) {
+        reportError(err);
+      } else {
+        var stats = statsBySummoner[localSummoner.summonerId];
+        if( stats ){
+          localSummoner.stats = calculateStats(stats);
+          $('.view-my-stats').fadeOut();
+          Session.set("localSummoner", localSummoner);
+        }
+      }
+    });
+  },
   'click .change-summoner': resetApp
 });

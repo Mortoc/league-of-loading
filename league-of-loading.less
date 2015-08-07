@@ -23,13 +23,32 @@ body {
   .roboto;
 }
 
+@adHeight: 60px;
+
 .ad {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   width: auto;
-  height: 60px;
+  height: @adHeight;
+  background-color: rgba(123, 54, 179, .75);
+  padding-top: 8px;
+
+  h5 {
+    color: white;
+    .oswald;
+
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+.ad-spacer {
+  display: inline-block;
+  height: @adHeight;
 }
 
 .card-title {
@@ -65,41 +84,34 @@ body {
 		margin-left: 30px;
 	}
 
+  .right-side {
+    display: inline-block;
+    float: right;
+  }
+
 	a {
     display: inline-block;
+    float: right;
+    display: inline-block;
 		white-space: nowrap;
-		margin-right: 30px;
+		margin: 14px 30px 0 0;
     float: right;
 		text-align: right;
 		text-transform: uppercase;
 		font-size: 12px;
 		line-height: 12px;
-    margin-top: (@topBarHeight - 12px) / 2;
 	}
+
+  .user-icon {
+    display: inline-block;
+    float: right;
+    height: 14px;
+    width: 14px;
+    margin: 12px 10px;
+    fill: #ff9800;
+  }
 }
 
-.app-footer {
-	position: fixed;
-	bottom: 16px;
-	left: 32px;
-	right: 32px;
-	height: 60px;
-
-	display: flex;
-	align-items: center;
-	padding: 20px;
-
-	a {
-		line-height: 20px;
-		font-size: 14px;
-		text-transform: uppercase;
-		color: #ffab40;
-		transition: color .3s ease;
-		&:hover {
-			color: lighten(#ffab40, 10%);
-		}
-	}
-}
 
 .team(@color) {
 	border-left: 5px solid @color;
@@ -117,8 +129,24 @@ body {
 	.team(#8e24aa);
 }
 
-.current-game .refresh-game {
-  width: 100%;
+.current-game {
+  .checking-game-indicator {
+    margin: 24px 0 18px 0;
+  }
+  .card-action {
+    padding-bottom: 15px;
+  }
+  .refresh-game {
+    display: inline-block;
+    margin: 0 0 0 4px;
+    width: 24px;
+    height: 24px;
+    fill: #ff9800;
+  }
+  .view-my-stats {
+    float: right;
+    margin: 3px 0 0 0;
+  }
 }
 
 .participant-listing {
@@ -184,29 +212,29 @@ body {
     }
   }
 
-
 	.collapsible-body {
 		background-color: white;
-
-		.collection {
-			margin: 0 10px 0 10px;
-
-      .collection-item {
-        .stat-title {
-          font-weight: normal;
-          color: rgba(0, 0, 10, .66);
-        }
-        .stat-value {
-          float: right;
-          font-weight: bold;
-          color: rgba(0, 0, 10, .75);
-
-          &:empty:after {
-            content: "Loading...";
-            color: rgba(0, 0, 10, .25);
-          }
-        }
-      }
-		}
 	}
+}
+
+.summoner-stats {
+  margin: 0 10px 0 10px;
+
+  .collection-item {
+    .stat-title {
+      font-weight: normal;
+      color: rgba(0, 0, 10, .66);
+    }
+    .stat-value {
+      float: right;
+      font-weight: bold;
+      color: rgba(0, 0, 10, .75);
+
+      &:empty:after {
+        content: "Loading...";
+        color: rgba(0, 0, 10, .25);
+      }
+    }
+  }
+
 }

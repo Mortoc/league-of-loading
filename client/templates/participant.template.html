@@ -1,0 +1,55 @@
+
+<template name="participant">
+  <li class="participant-listing {{team}}" data-summoner-id="{{summonerId}}">
+    <div class="collapsible-header">
+      <img
+        class="summoner-icon"
+        src={{championInfo.image.full}} />
+      <span class="summoner-name">
+        {{summonerName}}
+      </span>
+      <img class="spell-icon" src={{spell1Url}} />
+      <img class="spell-icon" src={{spell2Url}} />
+
+      <span class="league-title text-lighten-1">
+        {{soloQueueLeague.displayText}}
+      </span>
+
+      <img
+        class="league-icon"
+        src={{soloQueueLeague.iconUrl}} />
+    </div>
+    <div class="collapsible-body">
+      <div class="row">
+        <div class="col s12">
+          <ul class="tabs">
+            <li class="tab col s3">
+              <a class="active {{teamText}}" href="#summoner-tips-{{summonerId}}">{{ summonerName }} Stats</a>
+            </li>
+            <li class="tab col s3">
+              <a class="{{teamText}}" href="#champ-tips-{{summonerId}}">{{ championInfo.name }}</a>
+            </li>
+          </ul>
+        </div>
+        <div id="summoner-tips-{{summonerId}}" class="col s12">
+          {{> summonerStats}}
+        </div>
+        <div id="champ-tips-{{summonerId}}" class="col s12">
+          {{#if isAlly}}
+            <ul class='collection'>
+              {{#each championInfo.allytips}}
+              <li class="collection-item"> {{this}} </li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <ul class='collection'>
+              {{#each championInfo.enemytips}}
+              <li class="collection-item"> {{this}} </li>
+              {{/each}}
+            </ul>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </li>
+</template>

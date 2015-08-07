@@ -1,0 +1,32 @@
+<template name="summonerStats">
+  <ul class="collection summoner-stats">
+    <li class="collection-item">
+      <span class="stat-title">Likely to Survive</span>
+      <span class="stat-value">{{stats.deaths}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Kills and Assists</span>
+      <span class="stat-value">{{stats.killsAndAssists}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Vision Control</span>
+      <span class="stat-value">{{stats.visionControlRating}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Tower Threat</span>
+      <span class="stat-value">{{stats.towerFocus}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Jungle Invader</span>
+      <span class="stat-value">{{stats.likelyToInvadeJungle}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Farming</span>
+      <span class="stat-value">{{stats.farmRating}}</span>
+    </li>
+    <li class="collection-item">
+      <span class="stat-title">Most common role</span>
+      <span class="stat-value">{{stats.mostCommonRole}}</span>
+    </li>
+  </ul>
+</template>
