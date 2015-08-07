@@ -73,9 +73,11 @@ makeRiotApiCall = function(url, options) {
   // If the cached model wasn't used, do the external query and cache the result
   if( !usedCache ) {
     console.log("Calling RIOT API", url);
+    var startCallTime = new Date().getTime();
     Meteor.http.get(url, {params: { api_key: RIOT.KEY }}, function(error, result) {
+      console.log("  Response Time: " + (new Date().getTime() - startCallTime) + "ms");
       if(error) {
-        console.log("Handling an error code: ", error.response.statusCode);
+        console.log("  Handling an error code: ", error.response.statusCode);
         var errorHandleResult = _options.errorHandler(error.response.statusCode);
         if( !_.isUndefined(errorHandleResult) ) {
           future.return(errorHandleResult);

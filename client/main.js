@@ -36,7 +36,7 @@ function customShowStaggeredList(selector, options) {
 
 var animateInPlayerList = _.debounce(function(){
   var listAnimateInTime = customShowStaggeredList("#participant-list", {
-    duration: 500,
+    duration: 400,
     elementDelay: 30
   });
 
@@ -56,7 +56,7 @@ var animateInPlayerList = _.debounce(function(){
   $('.participant-listing').one("click", function(){
     $(this).find(".tab .active").click();
   });
-}, 2500);
+}, 500);
 
 function updateCurrentGame(currentGame) {
   // there weren't players and now there are
