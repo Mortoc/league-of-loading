@@ -111,6 +111,14 @@ function aggregateEntryExists(match) {
     matchId: match.matchId
   };
 
+  if( !matchIdentity.summonerId ) {
+    throw new Meteor.Error(500, "Cannot find summonerId for matchIdentity");
+  }
+
+  if( !matchIdentity.matchId ) {
+    throw new Meteor.Error(500, "Cannot find matchId for matchIdentity");
+  }
+
   if( AggregatedSummonerGames.findOne(matchIdentity) ) {
     return true;
   } else {
@@ -123,8 +131,16 @@ function addMatchToAggregateStats(matchData) {
   if( matchData.participants.length > 1 ) {
     console.warn("unexpected data, multiple participants returned from Riot");
   }
+
   var participant = _.first(matchData.participants);
   var group = matchToStatGroup(matchData);
+
+  if( !participant ) {
+    throw Meteor.Error(500, "Match has no participants " + matchData.matchId);
+  }
+  if( !group ) {
+    throw Meteor.Error(500, "Unable to build match name from match data for match " + matchData.matchId);
+  }
 
   if( !aggregateEntryExists(matchData) ) {
     var aggregateStats = AggregateSummonerStats.findOne({
@@ -176,7 +192,7 @@ function getSummonerPerformance(matches) {
         if( _.isUndefined(memo[statName]) ) {
           memo[statName] = 0;
         }
-        
+
         if( Math.abs(avgStatValue) < 0.0001 ) {
           memo[statName] += 1.0;
         } else {
