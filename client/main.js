@@ -22,12 +22,20 @@ function customShowStaggeredList(selector, options) {
       { duration: _options.duration, delay: time, easing: [60, 10] });
     time += _options.elementDelay;
   });
+  return time;
 }
 
 var animateInPlayerList = _.debounce(function(){
-  customShowStaggeredList("#participant-list", {
+  var listAnimateInTime = customShowStaggeredList("#participant-list", {
     duration: 500,
     elementDelay: 30
+  });
+
+  $(".current-game .refresh-game").velocity({
+    opacity: "1"
+  }, {
+    duration: 500,
+    delay: listAnimateInTime
   });
 
   $('.collapsible').collapsible({
@@ -39,7 +47,7 @@ var animateInPlayerList = _.debounce(function(){
   $('.participant-listing').one("click", function(){
     $(this).find(".tab .active").click();
   });
-}, 500);
+}, 2500);
 
 function updateCurrentGame(currentGame) {
   // there weren't players and now there are
@@ -71,7 +79,6 @@ function ritoPlsStripBuggedEndTagsFromArray(array) {
 
 function setupSummonerStats(summonerIds) {
   Meteor.call("summonerRecentStats", summonerIds, function(err, statsBySummoner) {
-    console.log("Got Stats", statsBySummoner);
     if( err ) {
       console.error(err);
     } else {
@@ -328,8 +335,7 @@ function resetApp() {
 
 var isCheckingCurrentGame = false;
 function checkCurrentGame() {
-
-  try{
+  try {
     if( isCheckingCurrentGame ) {
       return;
     }
@@ -431,6 +437,6 @@ Template.body.events({
     }
   },
   'click .load-summoner': setSummonerName,
-  'click .refresh-game': _.throttle(checkCurrentGame, 2500),
-  'click .change-summoner': resetApp,
+  'click .refresh-game': checkCurrentGame,
+  'click .change-summoner': resetApp
 });

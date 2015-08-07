@@ -173,6 +173,7 @@ function updateCurrentVersion() {
 }
 
 Meteor.startup(function(){
+  RiotAPICache._ensureIndex({url: 1});
   updateCurrentVersion();
   // update the version once a day
   Meteor.setTimeout(updateCurrentVersion, DAY);

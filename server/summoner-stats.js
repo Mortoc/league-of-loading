@@ -1,6 +1,4 @@
 
-// Stats for an individual summoner
-var SummonerStats = new Mongo.Collection("summonerStats");
 // Averages across all summoners
 var AggregateSummonerStats = new Mongo.Collection("aggregateSummonerStats");
 // keep track of which games are in the aggregate stats
@@ -237,4 +235,9 @@ summonerRecentStats = function(summonerIds) {
     memo[summonerId] = summonerStats;
     return memo;
   }, {});
+
+  Meteor.startup(function(){
+    AggregateSummonerStats._ensureIndex({grouping: 1});
+    AggregatedSummonerGames._ensureIndex({summonerId: 1, matchId: 1});
+  });
 };
